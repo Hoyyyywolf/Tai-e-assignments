@@ -24,6 +24,7 @@ package pascal.taie.analysis.dataflow.inter;
 
 import pascal.taie.analysis.dataflow.analysis.constprop.CPFact;
 import pascal.taie.analysis.dataflow.analysis.constprop.ConstantPropagation;
+import pascal.taie.analysis.dataflow.analysis.constprop.Value;
 import pascal.taie.analysis.graph.cfg.CFG;
 import pascal.taie.analysis.graph.cfg.CFGBuilder;
 import pascal.taie.analysis.graph.icfg.CallEdge;
@@ -76,37 +77,58 @@ public class InterConstantPropagation extends
 
     @Override
     protected boolean transferCallNode(Stmt stmt, CPFact in, CPFact out) {
-        // TODO - finish me
-        return false;
+        return out.copyFrom(in);
     }
 
     @Override
     protected boolean transferNonCallNode(Stmt stmt, CPFact in, CPFact out) {
-        // TODO - finish me
-        return false;
+        return cp.transferNode(stmt, in, out);
     }
 
     @Override
     protected CPFact transferNormalEdge(NormalEdge<Stmt> edge, CPFact out) {
-        // TODO - finish me
-        return null;
+        return out;
     }
 
     @Override
     protected CPFact transferCallToReturnEdge(CallToReturnEdge<Stmt> edge, CPFact out) {
-        // TODO - finish me
-        return null;
+        Invoke invoke = (Invoke)edge.getSource();
+
+        if (invoke.getResult() == null) return out;
+
+        CPFact oc = out.copy();
+        oc.update(invoke.getResult(), Value.getUndef());
+        return oc;
     }
 
     @Override
     protected CPFact transferCallEdge(CallEdge<Stmt> edge, CPFact callSiteOut) {
-        // TODO - finish me
-        return null;
+        Invoke invoke = (Invoke)edge.getSource();
+        InvokeExp invokeExp = invoke.getInvokeExp();
+        JMethod callee = edge.getCallee();
+        CPFact result = new CPFact();
+
+        for (int i = 0; i < callee.getParamCount(); ++i) {
+            IR calleeIR = icfg.getContainingMethodOf(edge.getTarget()).getIR();
+            if (ConstantPropagation.canHoldInt(calleeIR.getParam(i))) {
+                result.update(calleeIR.getParam(i), callSiteOut.get(invokeExp.getArg(i)));
+            }
+        }
+
+        return result;
     }
 
     @Override
     protected CPFact transferReturnEdge(ReturnEdge<Stmt> edge, CPFact returnOut) {
-        // TODO - finish me
-        return null;
+        Invoke invoke = (Invoke)edge.getCallSite();
+        CPFact result = new CPFact();
+
+        if (invoke.getResult() == null || !ConstantPropagation.canHoldInt(invoke.getResult())) return result;
+
+        IR calleeIR = icfg.getContainingMethodOf(edge.getSource()).getIR();
+        for (Var v : calleeIR.getReturnVars()) {
+            result.update(invoke.getResult(), cp.meetValue(result.get(invoke.getResult()), returnOut.get(v)));
+        }
+        return result;
     }
 }

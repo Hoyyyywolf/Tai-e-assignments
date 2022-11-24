@@ -177,7 +177,7 @@ class Solver {
                 Context methodContext = contextSelector.selectContext(csCallSite, callee);
                 addReachable(csManager.getCSMethod(methodContext, callee));
                 for (int i = 0; i < stmt.getInvokeExp().getArgCount(); i++) {
-                    Pointer target = csManager.getCSVar(methodContext, callee.getIR().getVar(i));
+                    Pointer target = csManager.getCSVar(methodContext, callee.getIR().getParam(i));
                     Pointer source = csManager.getCSVar(context, stmt.getInvokeExp().getArg(i));
                     addPFGEdge(source, target);
                 }
@@ -270,7 +270,7 @@ class Solver {
             addReachable(csMethod);
             if (callGraph.addEdge(new Edge<>(CallGraphs.getCallKind(stmt), csCallSite, csMethod))) {
                 for (int i = 0; i < stmt.getInvokeExp().getArgCount(); i++) {
-                    Pointer target = csManager.getCSVar(methodContext, callee.getIR().getVar(i));
+                    Pointer target = csManager.getCSVar(methodContext, callee.getIR().getParam(i));
                     Pointer source = csManager.getCSVar(recv.getContext(), stmt.getInvokeExp().getArg(i));
                     addPFGEdge(source, target);
                 }
